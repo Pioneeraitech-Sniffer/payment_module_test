@@ -19,4 +19,9 @@ export class OrdersController {
   stats(@Query('status') status?: string) {
     return this.orders.stats(status);
   }
+
+  @Get('stats-by-date')
+  statsByDate(@Query('from') from: string, @Query('to') to: string) {
+    return this.orders.statsByDate(from, to);
+  }
 }
