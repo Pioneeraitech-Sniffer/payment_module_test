@@ -1,18 +1,5 @@
 -- =====================================================================
 -- demo.orders_raw
---
--- INTENTIONALLY BAD SCHEMA. Used as a teaching/demo target for an AI
--- assistant to spot and fix later. Do not "clean this up" without
--- coordinating with the demo script.
---
--- Mistakes baked in on purpose:
---   1. Every column is TEXT — including numerics AND the date field
---      (order_date). Any query that needs to compare, sort, sum, or
---      range-filter must CAST on every row.
---   2. No supporting indexes on the columns we actually filter by:
---      customer_email, status, product_category, order_date.
---      Only the PK on id exists, so every realistic query is a Seq Scan.
---   3. No NOT NULL / CHECK constraints — bad data can land in any column.
 -- =====================================================================
 
 CREATE SCHEMA IF NOT EXISTS demo;
@@ -23,15 +10,16 @@ CREATE TABLE demo.orders_raw (
     id                TEXT PRIMARY KEY,
     customer_email    TEXT,
     product_category  TEXT,
-    quantity          TEXT,   -- should be INTEGER
-    price             TEXT,   -- should be NUMERIC(12,2)
+    quantity          INTEGER,        -- was TEXT (anti-pattern: numeric as text)
+    price             NUMERIC(12,2),  -- was TEXT (anti-pattern: numeric as text)
     status            TEXT,
-    order_date        TEXT    -- should be DATE / TIMESTAMPTZ
+    order_date        DATE            -- was TEXT (anti-pattern: date as text)
 );
 
--- NOTE: deliberately NO indexes on customer_email, status,
--- product_category, or order_date. Leave these missing so the AI
--- assistant can identify them later.
+-- Indexes to support range and equality filters without sequential scans
+CREATE INDEX ON demo.orders_raw (order_date);
+CREATE INDEX ON demo.orders_raw (customer_email);
+CREATE INDEX ON demo.orders_raw (status);
 
 INSERT INTO demo.orders_raw (id, customer_email, product_category, quantity, price, status, order_date) VALUES
     ('1',  'alice@example.com',   'books',       '2',  '19.99',  'paid',     '2026-01-04'),
