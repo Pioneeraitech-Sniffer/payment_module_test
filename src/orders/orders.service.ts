@@ -33,24 +33,17 @@ export class OrdersService {
     };
   }
 
-  // Intentionally unoptimized: order_date is TEXT, so the cast happens
-  // on every row. Even if an index existed on order_date, wrapping the
-  // column in CAST(...) would make it non-sargable. No index exists on
-  // order_date anyway — full scan.
   async statsByDate(from: string, to: string) {
     const started = Date.now();
     const { rows } = await this.pool.query(
       `
       SELECT
         product_category,
-        COUNT(*)                                                          AS line_items,
-        SUM(CAST(quantity AS NUMERIC))                                    AS units,
-        ROUND(
-          SUM(CAST(price AS NUMERIC) * CAST(quantity AS NUMERIC))::numeric,
-          2
-        )                                                                 AS revenue
+        COUNT(*)                                AS line_items,
+        SUM(quantity)                           AS units,
+        ROUND(SUM(price * quantity), 2)         AS revenue
       FROM demo.orders_raw
-      WHERE CAST(order_date AS DATE) BETWEEN CAST($1 AS DATE) AND CAST($2 AS DATE)
+      WHERE order_date BETWEEN $1::date AND $2::date
       GROUP BY product_category
       ORDER BY revenue DESC NULLS LAST
       `,
@@ -64,8 +57,6 @@ export class OrdersService {
     };
   }
 
-  // Intentionally unoptimized: numerics are stored as TEXT so every
-  // row has to be CAST, and there is no index to support the filter.
   async stats(status?: string) {
     const started = Date.now();
     const where = status ? `WHERE status = $1` : ``;
@@ -74,12 +65,9 @@ export class OrdersService {
       `
       SELECT
         product_category,
-        COUNT(*)                                                          AS line_items,
-        SUM(CAST(quantity AS NUMERIC))                                    AS units,
-        ROUND(
-          SUM(CAST(price AS NUMERIC) * CAST(quantity AS NUMERIC))::numeric,
-          2
-        )                                                                 AS revenue
+        COUNT(*)                                AS line_items,
+        SUM(quantity)                           AS units,
+        ROUND(SUM(price * quantity), 2)         AS revenue
       FROM demo.orders_raw
       ${where}
       GROUP BY product_category
